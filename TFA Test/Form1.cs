@@ -49,7 +49,6 @@ namespace TFA_Test
 
         private void CheckQrCode(TwoFactorAuth tfa,string secret)
         {
-
             Console.WriteLine(((DateTimeOffset)GetTimeServer()).ToUnixTimeSeconds());
             if (tfa.VerifyCode(secret, textBox2.Text, 1,timestamp: ((DateTimeOffset)GetTimeServer()).ToUnixTimeSeconds()+30)) //Code must be enter in 30 seconds before expire on google auth.
             {
