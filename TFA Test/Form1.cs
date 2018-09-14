@@ -15,13 +15,14 @@ using System.Windows.Forms;
 using TwoFactorAuthNet;
 using System.Security.Cryptography;
 using System.Reflection;
+using Microsoft.Win32;
 
 namespace TFA_Test
 {
     public partial class Form1 : Form
     {
         TwoFactorAuth tfa;
-        String secret = "BTPF7XOLCHPMW76KXJX54TVVAACTHZYZ";
+       String secret =null;
         public Form1()
         {
             InitializeComponent();
@@ -32,6 +33,27 @@ namespace TFA_Test
             {
                 panel1.Hide();
                 panel2.Location = panel1.Location;
+                //opening the subkey  
+                RegistryKey key = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\TFA Store");
+                //if it does exist, retrieve the stored values  
+                if (key != null)
+                {
+                    //Password = key.GetValue("Password").ToString();
+                    //Name = key.GetValue("Name").ToString();
+                    Console.WriteLine(key.GetValue("Name"));
+                    Console.WriteLine(key.GetValue("Data"));
+                    String key2=key.GetValue("Data").ToString();
+                    key.Close();
+                    Console.WriteLine(key2);
+                    byte [] decrypted=AES_Decrypt(Encoding.Unicode.GetBytes(key2), Encoding.ASCII.GetBytes("fisher89"));
+                    Console.WriteLine(Encoding.ASCII.GetChars(decrypted));
+                    secret = new String(Encoding.ASCII.GetChars(decrypted)).Split(',')[1];
+                }
+                else
+                {
+                    panel1.Show();
+
+                }
             }
             else
             {
@@ -47,15 +69,48 @@ namespace TFA_Test
 
         private void Button1_Click(object sender, EventArgs e)
         {
-            string testo = textBox1.Text;
+            string FullName = textBox1.Text;
+            if (FullName.Length != 0 && maskedTextBox1.TextLength !=0 )
+            {
+                secret = tfa.CreateSecret(160);
+                var uri = tfa.QrCodeProvider.GetQrCodeImage(String.Format("otpauth://totp/{0}?secret={1}&issuer=TFA Store", FullName, secret), 150);
+                //Console.WriteLine(System.Text.UTF8Encoding.UTF8.GetString(uri));
+                Image x = (Bitmap)((new ImageConverter()).ConvertFrom(uri));
+                pictureBox1.Image = x;
+                RegiStrKey(FullName, secret);
+            }
+        }
+        private void RegiStrKey(string name,string secret)
+        {
             
-            //secret = tfa.CreateSecret(160);
-            var uri = tfa.QrCodeProvider.GetQrCodeImage(String.Format("otpauth://totp/{0}?secret={1}&issuer=TFA Test", "sasa", secret), 150);
-            //Console.WriteLine(System.Text.UTF8Encoding.UTF8.GetString(uri));
-            Image x = (Bitmap)((new ImageConverter()).ConvertFrom(uri));
-            pictureBox1.Image = x;
-            var validate = maskedTextBox1.Text.ToLower();
-            Console.WriteLine(validate);
+                StringBuilder encryptData = new StringBuilder();
+                encryptData.Append(name+","+secret+","+maskedTextBox1.Text);
+                byte [] encrypted=AES_Encrypt(Encoding.ASCII.GetBytes(encryptData.ToString()),Encoding.ASCII.GetBytes(maskedTextBox1.Text));
+                
+                //opening the subkey  
+                RegistryKey key = Registry.CurrentUser.CreateSubKey(@"SOFTWARE\TFA Store");
+                key.SetValue("Name", name);
+                key.SetValue("Data", new String(Encoding.Unicode.GetChars(encrypted)));
+                key.Close();
+        }
+        static string GetMd5Hash(MD5 md5Hash, string input)
+        {
+            // Convert the input string to a byte array and compute the hash.
+            byte[] data = md5Hash.ComputeHash(Encoding.UTF8.GetBytes(input));
+
+            // Create a new Stringbuilder to collect the bytes
+            // and create a string.
+            StringBuilder sBuilder = new StringBuilder();
+
+            // Loop through each byte of the hashed data 
+            // and format each one as a hexadecimal string.
+            for (int i = 0; i < data.Length; i++)
+            {
+                sBuilder.Append(data[i].ToString("x2"));
+            }
+
+            // Return the hexadecimal string.
+            return sBuilder.ToString();
         }
         static byte[] GetBytes(string str)
         {
@@ -123,6 +178,38 @@ namespace TFA_Test
             }
 
             return encryptedBytes;
+        }
+        public byte[] AES_Decrypt(byte[] bytesToBeDecrypted, byte[] passwordBytes)
+        {
+            byte[] decryptedBytes = null;
+
+            // Set your salt here, change it to meet your flavor:
+            // The salt bytes must be at least 8 bytes.
+            byte[] saltBytes = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 };
+
+            using (MemoryStream ms = new MemoryStream())
+            {
+                using (RijndaelManaged AES = new RijndaelManaged())
+                {
+                    AES.KeySize = 256;
+                    AES.BlockSize = 128;
+
+                    var key = new Rfc2898DeriveBytes(passwordBytes, saltBytes, 1000);
+                    AES.Key = key.GetBytes(AES.KeySize / 8);
+                    AES.IV = key.GetBytes(AES.BlockSize / 8);
+
+                    AES.Mode = CipherMode.CBC;
+
+                    using (var cs = new CryptoStream(ms, AES.CreateDecryptor(), CryptoStreamMode.Write))
+                    {
+                        cs.Write(bytesToBeDecrypted, 0, bytesToBeDecrypted.Length);
+                        cs.Close();
+                    }
+                    decryptedBytes = ms.ToArray();
+                }
+            }
+
+            return decryptedBytes;
         }
         private void CheckQrCode(TwoFactorAuth tfa, string secret)
         {
