@@ -46,7 +46,6 @@ namespace TFA_Test
         {
             CheckQrCode(tfa, secret);
         }
-
         private void CheckQrCode(TwoFactorAuth tfa,string secret)
         {
             Console.WriteLine(((DateTimeOffset)GetTimeServer()).ToUnixTimeSeconds());
