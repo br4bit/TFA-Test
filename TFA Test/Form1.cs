@@ -59,7 +59,6 @@ namespace TFA_Test
                 Console.WriteLine("false");
             }
         }
-
         private static DateTime GetTimeServer()
         {
             try
