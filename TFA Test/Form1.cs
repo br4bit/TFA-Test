@@ -28,13 +28,13 @@ namespace TFA_Test
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            
+
         }
 
         private void button1_Click(object sender, EventArgs e)
         {
             string testo = textBox1.Text;
-            tfa = new TwoFactorAuth("TFA Test",qrcodeprovider: new MyQRProvider());
+            tfa = new TwoFactorAuth("TFA Test", qrcodeprovider: new MyQRProvider());
             secret = tfa.CreateSecret(160);
             var uri = tfa.QrCodeProvider.GetQrCodeImage(String.Format("otpauth://totp/{0}?secret={1}&issuer=TFA Test", textBox1.Text, secret), 250);
             //Console.WriteLine(System.Text.UTF8Encoding.UTF8.GetString(uri));
@@ -46,10 +46,10 @@ namespace TFA_Test
         {
             CheckQrCode(tfa, secret);
         }
-        private void CheckQrCode(TwoFactorAuth tfa,string secret)
+        private void CheckQrCode(TwoFactorAuth tfa, string secret)
         {
             Console.WriteLine(((DateTimeOffset)GetTimeServer()).ToUnixTimeSeconds());
-            if (tfa.VerifyCode(secret, textBox2.Text, 1,timestamp: ((DateTimeOffset)GetTimeServer()).ToUnixTimeSeconds()+30)) //Code must be enter in 30 seconds before expire on google auth.
+            if (tfa.VerifyCode(secret, textBox2.Text, 1, timestamp: ((DateTimeOffset)GetTimeServer()).ToUnixTimeSeconds() + 30)) //Code must be enter in 30 seconds before expire on google auth.
             {
                 Console.WriteLine("true");
             }
@@ -75,6 +75,7 @@ namespace TFA_Test
                 return DateTime.Now; //In case something goes wrong. 
             }
         }
+    }
        /* public static DateTime GetServerTime()
         {
             var result = DateTime.Now;
